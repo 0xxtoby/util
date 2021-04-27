@@ -1,4 +1,5 @@
 # coding="utf-8"
+from pprint import pprint
 
 import requests
 import re
@@ -28,8 +29,8 @@ class BaiDuPan(object):
     def __init__(self):
         # 创建session并设置初始登录Cookie
         self.session = requests.session()
-        # self.session.cookies['BDUSS'] = ''
-        # self.session.cookies['STOKEN'] = ''
+        self.session.cookies['BDUSS'] = 'ENTbjJaZlhOUmlHNWtlWjZaM0ZGcHZOQk5QandhZ3RuS0xVNHRCeWNTM0lrNTlnSUFBQUFBJCQAAAAAAAAAAAEAAADiTO8~AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMgGeGDIBnhgW'
+        self.session.cookies['STOKEN'] = '8557ccf74865c78e8746dae05e8a580972365a08610435b00454ed2a8f10abe1'
         self.headers = {
             'Host': 'pan.baidu.com',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36',
@@ -47,9 +48,12 @@ class BaiDuPan(object):
         else:
             response = self.session.get('https://pan.baidu.com/', headers=self.headers)
             home_page = response.content.decode("utf-8")
+            # print(home_page)
             if ('<title>百度网盘-全部文件</title>' in home_page):
-                user_name = re.findall(r'initPrefetch\((.+?)\'\)', home_page)[0]
-                user_name = re.findall(r'\, \'(.+?)\'\)', home_page)[0]
+                # user_name = re.findall(r'initPrefetch\((.+?)\'\)', home_page)[0]
+                # user_name = re.findall(r'\, \'(.+?)\'\)', home_page)[0]
+                user_name = re.findall(r'"username":"(.*?)"', home_page)[0]
+
                 return {'errno': 0, 'err_msg': '有效的Cookie，用户名：%s' % user_name}
             else:
                 return {'errno': 2, 'err_msg': '无效的Cookie！'}
@@ -79,7 +83,8 @@ class BaiDuPan(object):
         '''
         # 访问首页获取bdstoken
         response = self.session.get('https://pan.baidu.com/', headers=self.headers)
-        bdstoken = re.findall(r'initPrefetch\(\'(.+?)\'\,', response.content.decode("utf-8"))[0]
+        # bdstoken = re.findall(r'initPrefetch\(\'(.+?)\'\,', response.content.decode("utf-8"))[0]
+        bdstoken = re.findall(r'"bdstoken":"(.*?)"', response.content.decode("utf-8"))[0]
         t = random.random()
         startLogTime = str(int(time.time()) * 1000)
         url = 'https://pan.baidu.com/api/list?bdstoken=%s&dir=%s&order=%s&desc=%s&page=%s&num=%s&t=%s&startLogTime=%s\
@@ -256,6 +261,7 @@ class BaiDuPan(object):
 
         # 提取码校验的请求中有此参数
         bdstoken = re.findall(r'bdstoken\":\"(.+?)\"', share_page)
+
         bdstoken = bdstoken[0] if (bdstoken) else ''
         # 如果加密分享，需要验证提取码，带上验证通过的Cookie再请求分享链接，即可获取分享文件
         if ('init' in share_res.url):
@@ -274,34 +280,42 @@ class BaiDuPan(object):
                 # 加密分享验证通过后，使用全局session刷新页面（全局session中带有解密的Cookie）
                 share_res = self.session.get(url, headers=self.headers)
                 share_page = share_res.content.decode("utf-8")
+
         # 更新bdstoken，有时候会出现 AttributeError: 'NoneType' object has no attribute 'group'，重试几次就好了
-        share_data = json.loads(re.search("yunData.setData\(({.*})\)", share_page).group(1))
+        share_data = json.loads(re.search("locals.mset\(({.*})\)", share_page).group(1))
         bdstoken = share_data['bdstoken']
         shareid = share_data['shareid']
         _from = share_data['uk']
         '''
         构造转存的URL，除了logid不知道有什么用，但是经过验证，固定值没问题，其他变化的值均可在验证通过的页面获取到
         '''
-        save_url = 'https://pan.baidu.com/share/transfer?shareid=%s&from=%s&ondup=newcopy&async=1&channel=chunlei&web=1&app_id=250528&bdstoken=%s\
-					&logid=MTU3MjM1NjQzMzgyMTAuMjUwNzU2MTY4MTc0NzQ0MQ==&clienttype=0' % (shareid, _from, bdstoken)
-        file_list = share_data['file_list']['list']
+        save_url = 'https://pan.baidu.com/share/transfer?shareid=%s&from=%s&channel=chunlei&web=1&app_id=250528&bdstoken=%s&logid=MjIyQzVDQUZEQ0JFMUQyRUNBMDk1RkQyN0Y4N0VDNUM6Rkc9MQ==&clienttype=0' % (shareid, _from, bdstoken)
+        print(share_data)
+        file_list = share_data['file_list']
+        # pprint(file_list)
         form_data = {
             # 这个参数一定要注意，不能使用['fs_id', 'fs_id']，谨记！
             'fsidlist': '[' + ','.join([str(item['fs_id']) for item in file_list]) + ']',
             'path': path,
         }
+        pprint(form_data)
         headers = self.headers
         headers['Origin'] = 'https://pan.baidu.com'
-        headers['referer'] = url
+        headers['Referer'] = url
         '''
         用带登录Cookie的全局session请求转存
         如果有同名文件，保存的时候会自动重命名：类似xxx(1)
         暂时不支持超过文件数量的文件保存
         '''
+        pprint(headers)
+        print(save_url)
         save_res = self.session.post(save_url, headers=headers, data=form_data)
+        # print(save_res)
         save_json = save_res.json()
+        pprint(save_json)
         errno, err_msg, extra, info = (0, '转存成功', save_json['extra'], save_json['info']) if (
                     save_json['errno'] == 0) else (9, '转存失败：%d' % save_json['errno'], '', '')
+
         return {'errno': errno, 'err_msg': err_msg, "extra": extra, "info": info}
 
     '''
@@ -361,6 +375,7 @@ class BaiDuPan(object):
             return {'errno': 0, 'err_msg': '删除成功！'}
         else:
             return {'errno': 1, 'err_msg': '删除失败！', 'info': response.json()}
+
 
     '''
     移动文件至指定目录
