@@ -24,7 +24,8 @@ def cookies_sqlit(cookies,str):
     cook={}
     for c in cookies_data:
         if c:
-            cook[c.split(str)[0]]=c.split(str)[-1]
+
+            cook[c.split(str)[0].strip()]=c.split(str)[-1].strip()
 
     return cook
 def headers_sqlit(headers):
@@ -35,13 +36,14 @@ def headers_sqlit(headers):
         # print(h)
         # print('======')
         if h:
-            hh[h.split(':')[0]]=h.split(':')[-1]
+
+            hh[h.split(':')[0].strip()]=h.split(':')[-1].strip()
 
     return hh
 
+#
+#
 
-
-
-# # pprint((cookies_sqlit(c)))
+# pprint((cookies_sqlit(c,'=')))
 # print('1')
 # pprint(headers_sqlit(s))

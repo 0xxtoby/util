@@ -13,15 +13,16 @@ bd=BaiDuPan()
 
 print(bd.verifyCookie())
 
-# pprint(bd.getFileList())
+# pprint(bd.getFileList(dir='/wink'))
+# print(bd.delete(path='/wink/SNN.7z'))
 
 '''
 链接: https://pan.baidu.com/s/1rFs_70laSD9blGRjILyt0A 提取码: 88d6 复制这段内容后打开百度网盘手机App，操作更方便哦 
 --来自百度网盘超级会员v2的分享
 '''
 
-print(bd.saveShare(url='https://pan.baidu.com/s/1huJVw0-TYuMi28q_SWq2sw '
-                   ,pwd='wz40',path='/wink'))
+print(bd.saveShare(url='https://pan.baidu.com/share/init?surl=ZWABqaSdCIThWXHAskgpGw'
+                   ,pwd='rwpk',path='/wink'))
 
 # https://pan.baidu.com/share/transfer?shareid=651034494&from=1278979120&channel=chunlei&web=1&app_id=250528&bdstoken=78ac8ceb59aced28b59f32ca74ab08ce&logid=MTU3MjM1NjQzMzgyMTAuMjUwNzU2MTY4MTc0NzQ0MQ==&clienttype=0
 # https://pan.baidu.com/share/transfer?shareid=651034494&from=2760230365&channel=chunlei&web=1&app_id=250528&bdstoken=78ac8ceb59aced28b59f32ca74ab08ce&logid=MjIyQzVDQUZEQ0JFMUQyRUNBMDk1RkQyN0Y4N0VDNUM6Rkc9MQ==&clienttype=0

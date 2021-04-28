@@ -10,7 +10,7 @@ import random
 # import pytesseract
 from PIL import Image
 from io import BytesIO
-
+from util.html_header import *
 '''
 初次使用时，请先从浏览器的开发者工具中获取百度网盘的Cookie，并设置在init方法中进行配置，并调用verifyCookie方法测试Cookie的有效性
 已实现的方法：
@@ -29,8 +29,18 @@ class BaiDuPan(object):
     def __init__(self):
         # 创建session并设置初始登录Cookie
         self.session = requests.session()
+        cookies_data='''BAIDUID=5CBFE810ACD340EE0817FA0520B08AA5:FG=1; BIDUPSID=5CBFE810ACD340EE0817FA0520B08AA5; PSTM=1594364068; csrfToken=E7ckFTxNIqIH7q-v-hIKLbh7; Hm_lvt_7a3960b6f067eb0085b7f96ff5e660b0=1619537390,1619538156,1619538179,1619538391; Hm_lpvt_7a3960b6f067eb0085b7f96ff5e660b0=1619538391; PANWEB=1; BDCLND=dhrcmC49nzxcywfVzctNLlG5n0LjGNsi0QehgQhW8BQ%3D; BDUSS=U5TXM3QTlkV1RhbFdmdVdmcUxwamNSQU5MYVRObzA4c200YWxOeXB3ZnF1cTlnRUFBQUFBJCQAAAAAAAAAAAEAAADiTO8~AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOotiGDqLYhgcz; STOKEN=f9fdaa48ec4782a3b57714d652e1872e5ed2b527c01487944bcbec75be7dfb1a; PANPSC=7609379641162626469%3AKkwrx6t0uHBpImnDD%2FxwH4YFB6Yu73HpzBhPI6TlThqkQTcdOb0hNUci2O0YbEjpgA8tZv0GBmRJHOEJCPzniaKK%2FFH5WUxXk2vyMkqgzoLBxARvQH%2BibHZNBoZ8i0CTW8pfgMw2m%2FoeGDMyMjs7itnzWX47O8AWdVexAcWtW9O3ajUyYmLmFn1t8VXlRfZV'''
+        cookie=cookies_sqlit(cookies_data,'=')
+
+        c_list=cookies_data.split(';')
+
+        for c in c_list:
+            self.session.cookies[c.split('=')[0]]=c.split('=')[-1]
+
         self.session.cookies['BDUSS'] = 'ENTbjJaZlhOUmlHNWtlWjZaM0ZGcHZOQk5QandhZ3RuS0xVNHRCeWNTM0lrNTlnSUFBQUFBJCQAAAAAAAAAAAEAAADiTO8~AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMgGeGDIBnhgW'
         self.session.cookies['STOKEN'] = '8557ccf74865c78e8746dae05e8a580972365a08610435b00454ed2a8f10abe1'
+        # self.session.cookies=cookie
+        print(self.session.cookies)
         self.headers = {
             'Host': 'pan.baidu.com',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36',
@@ -228,12 +238,11 @@ class BaiDuPan(object):
                 'err_msg': '重试多次后，验证码依旧不正确：%d' % (verify_json['errno'] if ("verify_json" in locals()) else -1)}
 
     '''
-    返回值errno代表的意思：
-    0 转存成功；1 无效的分享链接；2 分享文件已被删除；
-    3 分享文件已被取消；4 分享内容侵权，无法访问；5 找不到文件；6 分享文件已过期
-    7 获取提取码失败；8 获取加密cookie失败； 9 转存失败；
-    '''
-
+	返回值errno代表的意思：
+	0 转存成功；1 无效的分享链接；2 分享文件已被删除；
+	3 分享文件已被取消；4 分享内容侵权，无法访问；5 找不到文件；6 分享文件已过期
+	7 获取提取码失败；8 获取加密cookie失败； 9 转存失败；
+	'''
     def saveShare(self, url, pwd=None, path='/'):
         share_res = self.session.get(url, headers=self.headers)
         share_page = share_res.content.decode("utf-8")
@@ -261,10 +270,10 @@ class BaiDuPan(object):
 
         # 提取码校验的请求中有此参数
         bdstoken = re.findall(r'bdstoken\":\"(.+?)\"', share_page)
-
         bdstoken = bdstoken[0] if (bdstoken) else ''
         # 如果加密分享，需要验证提取码，带上验证通过的Cookie再请求分享链接，即可获取分享文件
-        if ('init' in share_res.url):
+        if ('init ' in share_res.url):
+
             surl = re.findall(r'surl=(.+?)$', share_res.url)[0]
             if (pwd == None):
                 pwd_result = self.getSharePwd(surl)
@@ -273,6 +282,7 @@ class BaiDuPan(object):
                 else:
                     pwd = pwd_result['pwd']
             referer = share_res.url
+            print(surl,bdstoken,pwd,referer)
             verify_result = self.verifyShare(surl, bdstoken, pwd, referer)
             if (verify_result['errno'] != 0):
                 return {"errno": 8, "err_msg": verify_result['err_msg'], "extra": "", "info": ""}
@@ -289,34 +299,32 @@ class BaiDuPan(object):
         '''
         构造转存的URL，除了logid不知道有什么用，但是经过验证，固定值没问题，其他变化的值均可在验证通过的页面获取到
         '''
-        save_url = 'https://pan.baidu.com/share/transfer?shareid=%s&from=%s&channel=chunlei&web=1&app_id=250528&bdstoken=%s&logid=MjIyQzVDQUZEQ0JFMUQyRUNBMDk1RkQyN0Y4N0VDNUM6Rkc9MQ==&clienttype=0' % (shareid, _from, bdstoken)
-        print(share_data)
+        save_url = 'https://pan.baidu.com/share/transfer?shareid=%s&from=%s&ondup=newcopy&async=1&channel=chunlei&web=1&app_id=250528&bdstoken=%s&logid=MTU3MjM1NjQzMzgyMTAuMjUwNzU2MTY4MTc0NzQ0MQ==&clienttype=0' % (
+        shareid, _from, bdstoken)
         file_list = share_data['file_list']
-        # pprint(file_list)
         form_data = {
             # 这个参数一定要注意，不能使用['fs_id', 'fs_id']，谨记！
             'fsidlist': '[' + ','.join([str(item['fs_id']) for item in file_list]) + ']',
             'path': path,
         }
-        pprint(form_data)
         headers = self.headers
         headers['Origin'] = 'https://pan.baidu.com'
-        headers['Referer'] = url
+        headers['referer'] = url
         '''
         用带登录Cookie的全局session请求转存
         如果有同名文件，保存的时候会自动重命名：类似xxx(1)
         暂时不支持超过文件数量的文件保存
         '''
-        pprint(headers)
-        print(save_url)
+        print(form_data,save_url)
         save_res = self.session.post(save_url, headers=headers, data=form_data)
-        # print(save_res)
         save_json = save_res.json()
-        pprint(save_json)
+        print(save_json)
         errno, err_msg, extra, info = (0, '转存成功', save_json['extra'], save_json['info']) if (
                     save_json['errno'] == 0) else (9, '转存失败：%d' % save_json['errno'], '', '')
-
         return {'errno': errno, 'err_msg': err_msg, "extra": extra, "info": info}
+
+
+
 
     '''
     重命名指定文件
@@ -366,7 +374,7 @@ class BaiDuPan(object):
         &clienttype=0  固定值
         '''
         response = self.session.get('https://pan.baidu.com/', headers=self.headers)
-        bdstoken = re.findall(r'initPrefetch\(\'(.+?)\'\,', response.content.decode("utf-8"))[0]
+        bdstoken = re.findall(r'"bdstoken":"(.*?)"', response.content.decode("utf-8"))[0]
         url = 'https://pan.baidu.com/api/filemanager?bdstoken=%s&opera=delete&async=2&onnest=fail&channel=chunlei&web=1&app_id=250528\
 				&logid=MTU4MTk0MzY0MTQwNzAuNDA0MzQxOTM0MzE2MzM4Ng==&clienttype=0' % bdstoken
         form_data = {"filelist": "[\"%s\"]" % path}
