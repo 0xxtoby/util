@@ -38,7 +38,7 @@ class BaiDuPan(object):
             self.session.cookies[c.split('=')[0]]=c.split('=')[-1]
 
         self.session.cookies['BDUSS'] = 'ENTbjJaZlhOUmlHNWtlWjZaM0ZGcHZOQk5QandhZ3RuS0xVNHRCeWNTM0lrNTlnSUFBQUFBJCQAAAAAAAAAAAEAAADiTO8~AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMgGeGDIBnhgW'
-        self.session.cookies['STOKEN'] = '8557ccf74865c78e8746dae05e8a580972365a08610435b00454ed2a8f10abe1'
+        self.session.cookies['STOKEN'] = 'NOZFFxak9sTH4wdXFRR1FmVmhERDV4VC1KdVNCTkhkYVI5ZGxDVTQ1bE5HN0pnSUFBQUFBJCQAAAAAAAAAAAEAAADiTO8~AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE2OimBNjopgU2;'
         # self.session.cookies=cookie
         print(self.session.cookies)
         self.headers = {
@@ -272,9 +272,11 @@ class BaiDuPan(object):
         bdstoken = re.findall(r'bdstoken\":\"(.+?)\"', share_page)
         bdstoken = bdstoken[0] if (bdstoken) else ''
         # 如果加密分享，需要验证提取码，带上验证通过的Cookie再请求分享链接，即可获取分享文件
-        if ('init ' in share_res.url):
+        if ('init' in share_res.url):
+
 
             surl = re.findall(r'surl=(.+?)$', share_res.url)[0]
+
             if (pwd == None):
                 pwd_result = self.getSharePwd(surl)
                 if (pwd_result['errno'] != 0):
@@ -284,6 +286,7 @@ class BaiDuPan(object):
             referer = share_res.url
             print(surl,bdstoken,pwd,referer)
             verify_result = self.verifyShare(surl, bdstoken, pwd, referer)
+
             if (verify_result['errno'] != 0):
                 return {"errno": 8, "err_msg": verify_result['err_msg'], "extra": "", "info": ""}
             else:
@@ -292,6 +295,7 @@ class BaiDuPan(object):
                 share_page = share_res.content.decode("utf-8")
 
         # 更新bdstoken，有时候会出现 AttributeError: 'NoneType' object has no attribute 'group'，重试几次就好了
+        print(share_page)
         share_data = json.loads(re.search("locals.mset\(({.*})\)", share_page).group(1))
         bdstoken = share_data['bdstoken']
         shareid = share_data['shareid']
